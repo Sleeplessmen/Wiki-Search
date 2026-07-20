@@ -33,9 +33,79 @@ label {
   min-height: 1.25rem;
 }
 
+.article-shell {
+  max-width: 900px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid #a2a9b1;
+  padding: 1.5rem;
+}
+
+.article-toolbar {
+  display: flex;
+  justify-content: flex-start;
+}
+
 .article-image {
   max-height: 420px;
   object-fit: cover;
+}
+
+#article-title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 1.2;
+  border-bottom: 1px solid #a2a9b1;
+  padding-bottom: 0.5rem;
+}
+
+.article-content {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #202122;
+}
+
+.article-content h2,
+.article-content h3,
+.article-content h4 {
+  font-family: Georgia, "Times New Roman", serif;
+  border-bottom: 1px solid #a2a9b1;
+  margin-top: 1.5rem;
+  padding-bottom: 0.2rem;
+}
+
+.article-content p {
+  margin-bottom: 1rem;
+}
+
+.article-content ul,
+.article-content ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.article-content img {
+  max-width: 100%;
+  height: auto;
+  margin: 1rem 0;
+}
+
+.article-content blockquote {
+  border-left: 3px solid #a2a9b1;
+  padding-left: 1rem;
+  margin-left: 0;
+  color: #54595d;
+}
+
+.article-content a {
+  color: #0645ad;
+  text-decoration: none;
+}
+
+.article-content a:hover {
+  text-decoration: underline;
 }
 
 .result-card {
@@ -78,5 +148,13 @@ label {
   .container {
     padding-left: 1rem;
     padding-right: 1rem;
+  }
+
+  .article-shell {
+    padding: 1rem;
+  }
+
+  #article-title {
+    font-size: 1.6rem;
   }
 }

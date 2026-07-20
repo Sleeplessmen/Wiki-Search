@@ -8,7 +8,6 @@ const articleTitle = document.querySelector("#article-title");
 const articleImage = document.querySelector("#article-image");
 const articleContent = document.querySelector("#article-content");
 const articleLoading = document.querySelector("#article-loading");
-const articleExternalLink = document.querySelector("#article-external-link");
 const backButton = document.querySelector("#back-button");
 const suggestionsContainer = document.querySelector("#suggestions");
 const searchButton = document.querySelector("#search-button");
@@ -48,7 +47,7 @@ function clearStatus() {
 function showStatus(message) {
   statusMessage.innerHTML = `
     <div class="alert alert-info d-flex align-items-center gap-2" role="alert">
-      <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+      <div class="spinner-border spinner-border-sm" aria-hidden="true"></div>
       <div>${message}</div>
     </div>
   `;
@@ -89,6 +88,8 @@ function renderResults(pages) {
   }
 
   resultsView.innerHTML = `
+    <h2 class="mb-3">Search Results</h2>
+
     <div class="row g-3">
       ${pages
         .map(
@@ -104,10 +105,19 @@ function renderResults(pages) {
                   <h5 class="card-title">${page.title}</h5>
                   <p class="card-text result-extract">${page.extract || ""}</p>
                   <div class="mt-auto d-flex gap-2 flex-wrap">
-                    <button type="button" class="btn btn-outline-primary open-article" data-pageid="${page.pageid}">
+                    <button
+                      type="button"
+                      class="btn btn-outline-primary open-article"
+                      data-pageid="${page.pageid}"
+                    >
                       View article
                     </button>
-                    <a href="${page.fullurl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+                    <a
+                      href="${page.fullurl}"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="btn btn-primary"
+                    >
                       Read more
                     </a>
                   </div>
@@ -144,7 +154,7 @@ async function fetchWikipediaResults(query, limit = 20) {
 
 async function fetchWikipediaArticle(pageid) {
   const response = await fetch(
-    `https://en.wikipedia.org/w/api.php?action=query&pageids=${pageid}&prop=pageimages|extracts|info&explaintext=1&exlimit=max&inprop=url&pithumbsize=900&format=json&origin=*`,
+    `https://en.wikipedia.org/w/api.php?action=parse&pageid=${pageid}&prop=text|images|displaytitle&format=json&origin=*`,
   );
 
   if (!response.ok) {
@@ -157,14 +167,66 @@ async function fetchWikipediaArticle(pageid) {
     throw new Error(data.error.info || "Wikipedia API error");
   }
 
-  const page =
-    data.query?.pages?.[pageid] || Object.values(data.query?.pages || {})[0];
-
-  if (!page) {
+  if (!data.parse) {
     throw new Error("Article not found");
   }
 
-  return page;
+  return data.parse;
+}
+
+function sanitizeArticleHtml(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const root = doc.querySelector(".mw-parser-output") || doc.body;
+
+  root
+    .querySelectorAll(
+      [
+        ".mw-editsection",
+        ".mw-editsection-like",
+        ".reference",
+        ".reflist",
+        ".hatnote",
+        ".toc",
+        ".navbox",
+        ".navbox-container",
+        ".vertical-navbox",
+        ".sidebar",
+        ".infobox",
+        ".metadata",
+        ".mw-jump-link",
+        ".mw-empty-elt",
+        ".sistersitebox",
+        ".portal",
+        ".catlinks",
+        ".printfooter",
+        ".mw-hidden",
+      ].join(", "),
+    )
+    .forEach((node) => node.remove());
+
+  root.querySelectorAll("a").forEach((link) => {
+    link.replaceWith(...link.childNodes);
+  });
+
+  root
+    .querySelectorAll("script, style, noscript, form, table")
+    .forEach((node) => {
+      node.remove();
+    });
+
+  root.querySelectorAll("img").forEach((img) => {
+    const src = img.getAttribute("src") || "";
+    if (
+      !src ||
+      (src.includes("wikimedia") === false &&
+        src.includes("upload.wikimedia.org") === false)
+    ) {
+      img.remove();
+    }
+  });
+
+  return root.innerHTML;
 }
 
 async function onClickSearch() {
@@ -210,24 +272,28 @@ async function openArticle(pageid) {
   articleTitle.textContent = "";
   articleImage.classList.add("d-none");
   articleImage.removeAttribute("src");
-  articleExternalLink.href = selectedPage.fullurl || "#";
 
   try {
     const article = await fetchWikipediaArticle(pageid);
 
     state.selectedArticle = article;
     articleTitle.textContent = article.title || selectedPage.title;
-    articleExternalLink.href = article.fullurl || selectedPage.fullurl || "#";
 
-    if (article.thumbnail?.source) {
-      articleImage.src = article.thumbnail.source;
+    const articleHtml = article.text?.["*"] || "";
+    articleContent.innerHTML = articleHtml
+      ? sanitizeArticleHtml(articleHtml)
+      : "<p>No article content available.</p>";
+
+    const imageMatch =
+      article.images?.find((name) =>
+        /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(name),
+      ) || null;
+
+    if (imageMatch) {
+      articleImage.src = `https://en.wikipedia.org/wiki/Special:Redirect/file/${encodeURIComponent(imageMatch)}`;
       articleImage.alt = article.title || selectedPage.title;
       articleImage.classList.remove("d-none");
     }
-
-    articleContent.innerHTML = `
-      <p class="lead">${article.extract || "No article content available."}</p>
-    `;
   } catch (error) {
     articleContent.innerHTML = `
       <div class="alert alert-danger" role="alert">
